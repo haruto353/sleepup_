@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SleepUp</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f0eeff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a1a2e}
+.app{max-width:600px;margin:0 auto;padding:1rem}
+
+/* ===== キャラクターステージ ===== */
+.char-stage{
+  display:flex;flex-direction:column;align-items:center;
+  padding:1.5rem 1rem 1.2rem;
+  background:linear-gradient(160deg,#e8e6ff 0%,#f9e8ff 100%);
+  border-radius:24px;margin-bottom:1rem;
+  position:relative;overflow:hidden;
+  box-shadow:0 4px 20px #a89df220;
+}
+.char-stage-deco{
+  position:absolute;top:-10px;right:-10px;
+  width:80px;height:80px;border-radius:50%;
+  background:radial-gradient(circle,#c4b5fd44,transparent 70%);
+}
+.char-wrap{
+  position:relative;display:flex;flex-direction:column;
+  align-items:center;justify-content:flex-end;
+  height:170px;width:100%;
+}
+.char-svg{
+  transition:all 0.6s cubic-bezier(.34,1.56,.64,1);
+  filter:drop-shadow(0 6px 16px #7c6fe040);
+}
+
+/* 吹き出し */
+.speech-bubble{
+  position:absolute;top:0;left:50%;transform:translateX(-50%);
+  background:#fff;border:2.5px solid #c4b5fd;border-radius:16px;
+  padding:8px 16px;font-size:13px;color:#3C3489;
+  white-space:nowrap;z-index:2;
+  box-shadow:0 2px 12px #a89df220;
+  animation:popIn .35s cubic-bezier(.34,1.56,.64,1);
+}
+.speech-bubble::after{
+  content:'';position:absolute;bottom:-11px;left:50%;transform:translateX(-50%);
+  border:6px solid transparent;border-top-color:#c4b5fd;
+}
+.speech-bubble::before{
+  content:'';position:absolute;bottom:-7.5px;left:50%;transform:translateX(-50%);
+  border:6px solid transparent;border-top-color:#fff;z-index:1;
+}
+@keyframes popIn{
+  from{opacity:0;transform:translateX(-50%) scale(.6)}
+  to{opacity:1;transform:translateX(-50%) scale(1)}
+}
+@keyframes bounceIn{
+  0%{transform:scale(1)}40%{transform:scale(1.18)}70%{transform:scale(.95)}100%{transform:scale(1)}
+}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}
+}
+
+/* 名前・EXP */
+.char-meta{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;justify-content:center}
+.char-name-display{
+  font-size:15px;font-weight:700;color:#3C3489;
+  cursor:pointer;border-bottom:2px dashed #a89df2;padding-bottom:1px;
+}
+.char-name-display:hover{color:#534AB7}
+.char-lv-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  background:#534AB7;color:#fff;
+  font-size:11px;font-weight:600;
+  padding:3px 10px;border-radius:99px;
+}
+.mood-label{
+  font-size:11px;color:#7F77DD;
+  background:#eeeeff;padding:2px 10px;border-radius:99px;
+}
+
+.xp-bar-wrap{width:90%;margin-top:10px}
+.xp-labels{display:flex;justify-content:space-between;font-size:10px;color:#7F77DD;margin-bottom:4px}
+.xp-track{width:100%;height:10px;background:#d4cff7;border-radius:99px;overflow:hidden}
+.xp-fill{
+  height:100%;
+  background:linear-gradient(90deg,#818CF8,#C084FC);
+  border-radius:99px;
+  transition:width 0.9s cubic-bezier(.34,1.56,.64,1);
+}
+
+/* 名前入力モーダル */
+.name-modal{
+  display:none;position:fixed;inset:0;z-index:100;
+  background:#0004;align-items:center;justify-content:center;
+}
+.name-modal.show{display:flex}
+.name-modal-box{
+  background:#fff;border-radius:20px;padding:1.5rem;
+  width:90%;max-width:320px;text-align:center;
+  box-shadow:0 8px 32px #7c6fe040;
+  animation:popIn .3s cubic-bezier(.34,1.56,.64,1);
+}
+.name-modal-box h3{font-size:16px;color:#3C3489;margin-bottom:6px}
+.name-modal-box p{font-size:12px;color:#7F77DD;margin-bottom:14px}
+.name-modal-box input{
+  width:100%;border:2px solid #c4b5fd;border-radius:10px;
+  padding:10px;font-size:15px;text-align:center;
+  color:#3C3489;background:#f3f0ff;font-family:inherit;
+  margin-bottom:12px;outline:none;
+}
+.name-modal-box input:focus{border-color:#534AB7}
+.nm-btn-row{display:flex;gap:8px;justify-content:center}
+
+/* レベルアップ */
+.lvl-popup{
+  display:none;background:linear-gradient(135deg,#534AB7,#9333ea);
+  border-radius:16px;padding:1rem;text-align:center;
+  margin-bottom:.9rem;color:#fff;
+  box-shadow:0 4px 20px #7c6fe040;
+}
+.lvl-popup.show{display:block;animation:bounceIn .5s ease}
+.lvl-popup-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.lvl-popup-sub{font-size:12px;opacity:.85}
+
+/* ステップドット */
+.steps{display:flex;gap:5px;margin-bottom:1rem;align-items:center}
+.step-dot{width:10px;height:10px;border-radius:50%;background:#D3D1C7;transition:all .3s}
+.step-dot.done{background:#AFA9EC}
+.step-dot.active{width:26px;border-radius:99px;background:#534AB7}
+.step-lbl{font-size:11px;color:#534AB7;font-weight:600;margin-left:4px}
+
+/* 画面切り替え */
+.screen{display:none}
+.screen.active{display:block}
+
+/* カード */
+.q-card{
+  background:#fff;border:2px solid #e0dcff;border-radius:18px;
+  padding:1.1rem;margin-bottom:.9rem;
+  box-shadow:0 2px 10px #a89df210;
+}
+.q-label{font-size:12px;color:#534AB7;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+
+/* チップ */
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+.chip{
+  padding:6px 14px;border-radius:99px;
+  border:2px solid #e0dcff;font-size:12px;cursor:pointer;
+  color:#534AB7;background:#f3f0ff;
+  transition:all .15s;font-family:inherit;
+}
+.chip:hover{border-color:#a89df2}
+.chip.on{background:#534AB7;border-color:#534AB7;color:#fff}
+
+/* スライダー */
+.slider-row{display:flex;align-items:center;gap:10px}
+.slider-row input[type=range]{flex:1;accent-color:#534AB7}
+.snum{font-size:18px;font-weight:700;color:#3C3489;min-width:62px;text-align:right}
+
+/* 時間入力 */
+.tbox-row{display:flex;gap:8px}
+.tbox{flex:1;text-align:center}
+.tbox label{display:block;font-size:11px;color:#534AB7;margin-bottom:3px}
+.tbox input[type=time]{
+  width:100%;text-align:center;font-size:15px;
+  border:2px solid #e0dcff;border-radius:10px;padding:8px;
+  color:#3C3489;background:#f3f0ff;font-family:inherit;
+}
+
+/* ボタン */
+.btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:1.1rem}
+.btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:10px 20px;border-radius:99px;font-size:13px;font-weight:600;
+  cursor:pointer;border:2px solid #e0dcff;
+  background:#fff;color:#534AB7;
+  font-family:inherit;transition:all .15s;
+}
+.btn:hover{background:#f3f0ff}
+.btn.p{background:#534AB7;border-color:#534AB7;color:#fff}
+.btn.p:hover{background:#3C3489}
+.btn.sm{padding:7px 14px;font-size:12px}
+
+/* タスク */
+.task-list{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
+.task-row{
+  display:flex;align-items:center;gap:7px;
+  background:#f3f0ff;border-radius:10px;padding:7px 11px;
+}
+.task-nm{flex:1;font-size:12px;color:#3C3489}
+.task-dur{
+  font-size:11px;color:#534AB7;
+  background:#ddd9f7;padding:2px 8px;border-radius:99px;
+}
+.task-del{font-size:13px;color:#AFA9EC;cursor:pointer;border:none;background:none;padding:0}
+.task-del:hover{color:#D4537E}
+.add-row{display:flex;gap:5px;align-items:center}
+.add-row input{
+  flex:1;border:2px solid #e0dcff;border-radius:10px;
+  padding:7px 10px;font-size:12px;color:#3C3489;
+  background:#f3f0ff;font-family:inherit;
+}
+.add-row select{
+  border:2px solid #e0dcff;border-radius:10px;
+  padding:7px 8px;font-size:12px;color:#534AB7;
+  background:#f3f0ff;font-family:inherit;
+}
+.add-row button{
+  width:34px;height:34px;border-radius:50%;
+  background:#534AB7;border:none;color:#fff;
+  font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+
+/* 結果画面 */
+.res-hero{
+  background:linear-gradient(135deg,#e8e6ff,#f9e8ff);
+  border-radius:18px;padding:1.2rem;text-align:center;
+  margin-bottom:.9rem;border:2px solid #e0dcff;
+}
+.big-t{font-size:42px;font-weight:700;color:#3C3489;margin:4px 0}
+.res-msg{font-size:12px;color:#534AB7;margin-top:4px}
+
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:.9rem}
+.rc{border-radius:14px;padding:.9rem;text-align:center}
+.rc.sl{background:#E1F5EE;border:2px solid #9FE1CB}
+.rc.wk{background:#FAEEDA;border:2px solid #FAC775}
+.rc.df{background:#FBEAF0;border:2px solid #F4C0D1}
+.rc.nt{background:#f3f0ff;border:2px solid #c4b5fd}
+.rl{font-size:10px;font-weight:700;margin-bottom:3px}
+.rc.sl .rl{color:#0F6E56}.rc.wk .rl{color:#854F0B}
+.rc.df .rl{color:#993556}.rc.nt .rl{color:#534AB7}
+.rv{font-size:20px;font-weight:700}
+.rc.sl .rv{color:#085041}.rc.wk .rv{color:#633806}
+.rc.df .rv{color:#72243E}.rc.nt .rv{color:#3C3489}
+
+/* タイムライン */
+.tl-wrap{
+  background:#fff;border:2px solid #e0dcff;
+  border-radius:16px;padding:1.1rem;margin-bottom:.9rem;
+}
+.tl-head{font-size:11px;font-weight:700;color:#534AB7;margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.tl-item{display:flex;gap:9px;align-items:flex-start;margin-bottom:9px}
+.tl-item:last-child{margin-bottom:0}
+.pip{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.pip.tk{background:#f3f0ff;color:#534AB7}
+.pip.nt{background:#FAEEDA;color:#854F0B}
+.pip.zz{background:#E1F5EE;color:#0F6E56}
+.pip.sn{background:#FAEEDA;color:#854F0B}
+.tl-t{font-size:12px;font-weight:700;color:#1a1a2e}
+.tl-d{font-size:11px;color:#666}
+
+/* カレンダー */
+.streak-section{
+  background:#fff;border:2px solid #e0dcff;
+  border-radius:16px;padding:1.1rem;margin-bottom:.9rem;
+}
+.streak-head{font-size:11px;font-weight:700;color:#534AB7;margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:10px}
+.cal-day{
+  aspect-ratio:1;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;color:#534AB7;background:#f3f0ff;border:1.5px solid #e0dcff;
+}
+.cal-day.done{background:#534AB7;border-color:#534AB7;color:#fff}
+.cal-day.today{border-color:#D4537E;border-width:2.5px}
+.xp-gain{
+  display:inline-flex;align-items:center;gap:5px;
+  background:#FAEEDA;border:1.5px solid #FAC775;
+  border-radius:99px;padding:4px 12px;
+  font-size:12px;color:#633806;font-weight:700;
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== キャラクターステージ ===== -->
+  <div class="char-stage">
+    <div class="char-stage-deco"></div>
+    <div id="bubble" class="speech-bubble">はじめまして！名前を付けてね☆</div>
+    <div class="char-wrap">
+      <svg id="charSvg" class="char-svg" viewBox="0 0 100 120"
+           xmlns="http://www.w3.org/2000/svg" width="90" height="108">
+        <!-- 影 -->
+        <ellipse cx="50" cy="110" rx="22" ry="5" fill="#a89df2" opacity=".25"/>
+        <!-- 足 -->
+        <rect x="37" y="88" width="11" height="19" rx="5.5" fill="#fff" stroke="#c4b5fd" stroke-width="2"/>
+        <rect x="52" y="88" width="11" height="19" rx="5.5" fill="#fff" stroke="#c4b5fd" stroke-width="2"/>
+        <!-- 腕 -->
+        <rect x="22" y="57" width="11" height="21" rx="5.5" fill="#fff" stroke="#c4b5fd" stroke-width="2"/>
+        <rect x="67" y="57" width="11" height="21" rx="5.5" fill="#fff" stroke="#c4b5fd" stroke-width="2"/>
+        <!-- 胴体 -->
+        <rect x="30" y="50" width="40" height="42" rx="15" fill="#fff" stroke="#c4b5fd" stroke-width="2"/>
+        <!-- おなかマーク -->
+        <ellipse cx="50" cy="67" rx="7" ry="4" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1.5"/>
+        <!-- 頭 -->
+        <ellipse cx="50" cy="33" rx="27" ry="27" fill="#fff" stroke="#c4b5fd" stroke-width="2"/>
+        <!-- 目（左） -->
+        <g id="eyeL">
+          <circle cx="40" cy="31" r="5.5" fill="#3C3489"/>
+          <circle cx="41.8" cy="29.2" r="2" fill="#fff"/>
+        </g>
+        <!-- 目（右） -->
+        <g id="eyeR">
+          <circle cx="60" cy="31" r="5.5" fill="#3C3489"/>
+          <circle cx="61.8" cy="29.2" r="2" fill="#fff"/>
+        </g>
+        <!-- 眉毛（表情変化用） -->
+        <path id="browL" d="M35 22 Q40 19 45 22" stroke="#3C3489" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path id="browR" d="M55 22 Q60 19 65 22" stroke="#3C3489" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <!-- 口（表情変化用） -->
+        <path id="mouth" d="M43 42 Q50 47 57 42" stroke="#F4C0D1" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <!-- ほっぺ -->
+        <circle id="cheekL" cx="35" cy="38" r="5" fill="#FBEAF0" opacity=".8"/>
+        <circle id="cheekR" cx="65" cy="38" r="5" fill="#FBEAF0" opacity=".8"/>
+        <!-- 頭のデコ -->
+        <circle cx="42" cy="8"  r="3.5" fill="#FAC775"/>
+        <circle cx="58" cy="6"  r="2.5" fill="#9FE1CB"/>
+        <circle cx="50" cy="4"  r="3"   fill="#F4C0D1"/>
+      </svg>
+    </div>
+    <div class="char-meta">
+      <span class="char-name-display" id="charNameDisplay" onclick="openNameModal()" title="名前を変更">
+        ムーニー ✏️
+      </span>
+      <span class="char-lv-badge" id="lvlBadge">⭐ Lv.1</span>
+      <span class="mood-label" id="moodLabel">😊 ふつう</span>
+    </div>
+    <span style="font-size:11px;color:#9f97e0;margin-top:2px" id="charLevelLbl">Lv.1 たまご</span>
+    <div class="xp-bar-wrap">
+      <div class="xp-labels">
+        <span>EXP</span>
+        <span id="xpLbl">0 / 7</span>
+      </div>
+      <div class="xp-track"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- レベルアップポップアップ -->
+  <div class="lvl-popup" id="lvlPopup">
+    <div class="lvl-popup-title" id="lvlPopupTitle">🎉 レベルアップ！</div>
+    <div class="lvl-popup-sub" id="lvlPopupSub">成長しました！</div>
+  </div>
+
+  <!-- 名前変更モーダル -->
+  <div class="name-modal" id="nameModal" onclick="closeNameModalBg(event)">
+    <div class="name-modal-box">
+      <h3>なまえをつけてあげよう！</h3>
+      <p>ムーニーはどんな名前が好きかな？</p>
+      <input type="text" id="nameInput" maxlength="10" placeholder="例：ルナ、コスモ...">
+      <div class="nm-btn-row">
+        <button class="btn sm" onclick="closeNameModal()">キャンセル</button>
+        <button class="btn p sm" onclick="saveName()">決定！</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ステップ -->
+  <div class="steps">
+    <div class="step-dot active" id="d0"></div>
+    <div class="step-dot" id="d1"></div>
+    <div class="step-dot" id="d2"></div>
+    <div class="step-dot" id="d3"></div>
+    <span class="step-lbl" id="stepLbl">ステップ 1 / 4</span>
+  </div>
+
+  <!-- ===== 画面0: 現在の睡眠 ===== -->
+  <div class="screen active" id="s0">
+    <div class="q-card">
+      <div class="q-label"><i class="ti ti-zzz"></i> 今の平均睡眠時間は？</div>
+      <div class="slider-row">
+        <input type="range" min="3" max="10" step="0.5" value="6" id="sleepDur"
+          oninput="document.getElementById('sdv').textContent=parseFloat(this.value).toFixed(1)+'時間';updateMoodFromSleep()">
+        <span class="snum" id="sdv">6.0時間</span>
+      </div>
+    </div>
+    <div class="q-card">
+      <div class="q-label"><i class="ti ti-clock"></i> 普段の就寝・起床時間</div>
+      <div class="tbox-row">
+        <div class="tbox"><label>就寝</label><input type="time" id="curBed" value="01:00"></div>
+        <div class="tbox"><label>起床</label><input type="time" id="curWake" value="07:00"></div>
+      </div>
+    </div>
+    <div class="q-card">
+      <div class="q-label"><i class="ti ti-mood-smile"></i> 睡眠の満足度は？</div>
+      <div class="chips">
+        <button class="chip" onclick="pick1(this);updateMoodFromSatisfaction(this)">全然足りない</button>
+        <button class="chip on" onclick="pick1(this);updateMoodFromSatisfaction(this)">少し足りない</button>
+        <button class="chip" onclick="pick1(this);updateMoodFromSatisfaction(this)">まあまあ</button>
+        <button class="chip" onclick="pick1(this);updateMoodFromSatisfaction(this)">十分すぎる</button>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn p" onclick="go(1)">次へ <i class="ti ti-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- ===== 画面1: 目標設定 ===== -->
+  <div class="screen" id="s1">
+    <div class="q-card">
+      <div class="q-label"><i class="ti ti-target"></i> 目標の就寝・起床時間</div>
+      <div class="tbox-row">
+        <div class="tbox"><label>目標就寝</label><input type="time" id="goalBed" value="23:30"></div>
+        <div class="tbox"><label>目標起床</label><input type="time" id="goalWake" value="07:00"></div>
+      </div>
+    </div>
+    <div class="q-card">
+      <div class="q-label"><i class="ti ti-bell"></i> 何分前にリマインド？</div>
+      <div class="chips">
+        <button class="chip" onclick="pick1(this)">5分前</button>
+        <button class="chip on" onclick="pick1(this)">15分前</button>
+        <button class="chip" onclick="pick1(this)">30分前</button>
+        <button class="chip" onclick="pick1(this)">1時間前</button>
+      </div>
+    </div>
+    <div class="q-card">
+      <div class="q-label"><i class="ti ti-heart"></i> 改善したいこと（複数OK）</div>
+      <div class="chips">
+        <button class="chip on" onclick="this.classList.toggle('on')">集中力アップ</button>
+        <button class="chip" onclick="this.classList.toggle('on')">疲労回復</button>
+        <button class="chip" onclick="this.classList.toggle('on')">健康維持</button>
+        <button class="chip" onclick="this.classList.toggle('on')">気分改善</button>
+        <button class="chip" onclick="this.classList.toggle('on')">美容・肌ケア</button>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="go(0)"><i class="ti ti-arrow-left"></i> 戻る</button>
+      <button class="btn p" onclick="go(2)">次へ <i class="ti ti-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- ===== 画面2: 今日の予定 ===== -->
+  <div class="screen" id="s2">
+    <div class="q-card">
+      <div class="q-label"><i class="ti ti-calendar"></i> 今日の予定</div>
+      <div class="task-list" id="taskList"></div>
+      <div class="add-row">
+        <input type="text" id="newTask" placeholder="例：勉強、入浴...">
+        <select id="newDur">
+          <option value="15">15分</option>
+          <option value="30" selected>30分</option>
+          <option value="45">45分</option>
+          <option value="60">60分</option>
+          <option value="90">90分</option>
+          <option value="120">2時間</option>
+        </select>
+        <button onclick="addTask()" aria-label="追加"><i class="ti ti-plus"></i></button>
+      </div>
+    </div>
+    <div class="q-card">
+      <div class="q-label"><i class="ti ti-home"></i> フリータイム開始</div>
+      <div class="tbox-row">
+        <div class="tbox"><label>帰宅・自由時間の開始</label><input type="time" id="freeStart" value="19:00"></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="go(1)"><i class="ti ti-arrow-left"></i> 戻る</button>
+      <button class="btn p" onclick="calcResult()">プランを見る <i class="ti ti-sparkles"></i></button>
+    </div>
+  </div>
+
+  <!-- ===== 画面3: 結果 ===== -->
+  <div class="screen" id="s3">
+    <div class="res-hero">
+      <div class="big-t" id="resBed">—</div>
+      <div class="res-msg" id="resMsg">計算中...</div>
+    </div>
+    <div class="rgrid">
+      <div class="rc sl"><div class="rl"><i class="ti ti-moon"></i> 目標睡眠</div><div class="rv" id="rSl">—</div></div>
+      <div class="rc wk"><div class="rl"><i class="ti ti-sun"></i> 起床時刻</div><div class="rv" id="rWk">—</div></div>
+      <div class="rc df"><div class="rl"><i class="ti ti-trending-up"></i> 改善幅</div><div class="rv" id="rDf">—</div></div>
+      <div class="rc nt"><div class="rl"><i class="ti ti-bell"></i> 通知時刻</div><div class="rv" id="rNt">—</div></div>
+    </div>
+    <div class="tl-wrap">
+      <div class="tl-head"><i class="ti ti-list"></i> 今日のタイムライン</div>
+      <div id="tlBody"></div>
+    </div>
+    <div class="streak-section">
+      <div class="streak-head"><i class="ti ti-flame"></i> 継続カレンダー</div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="xp-gain"><i class="ti ti-plus"></i> +1 EXP 獲得！</span>
+        <span style="font-size:12px;color:#534AB7" id="streakCount"></span>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="go(2)"><i class="ti ti-arrow-left"></i> 予定を編集</button>
+    </div>
+  </div>
+
+</div><!-- /.app -->
+
+<script>
+/* ===================================================
+   定数・状態
+=================================================== */
+const LEVELS = [
+  {name:'たまご',       title:'Lv.1', next:7,    size:90,  msg:'さあ、いまの睡眠を教えてね！'},
+  {name:'ちびムーニー', title:'Lv.2', next:14,   size:106, msg:'すごい！ちょっと大きくなったよ！'},
+  {name:'ムーニー',     title:'Lv.3', next:21,   size:122, msg:'もっと成長できるよ！一緒にがんばろう！'},
+  {name:'でかムーニー', title:'Lv.4', next:28,   size:138, msg:'どんどん大きくなってきた！'},
+  {name:'マックスムーニー', title:'Lv.5', next:9999, size:156, msg:'最高レベル！ありがとう！'},
+];
+
+// 表情パターン定義
+// mood: 'happy' | 'normal' | 'sleepy' | 'sad' | 'excited'
+const MOODS = {
+  excited: {
+    label:'🤩 最高！',
+    browL:'M33 20 Q40 16 45 20', browR:'M55 20 Q60 16 67 20',
+    mouth:'M42 41 Q50 49 58 41',
+    eyeLr:6, eyeRr:6,
+    cheekOp:'1',
+    bubble: name => `${name}、最高の睡眠だね！！`,
+  },
+  happy: {
+    label:'😊 げんき',
+    browL:'M35 22 Q40 19 45 22', browR:'M55 22 Q60 19 65 22',
+    mouth:'M43 42 Q50 47 57 42',
+    eyeLr:5.5, eyeRr:5.5,
+    cheekOp:'.8',
+    bubble: name => `${name}、一緒にがんばろう！`,
+  },
+  normal: {
+    label:'😐 ふつう',
+    browL:'M35 23 Q40 21 45 23', browR:'M55 23 Q60 21 65 23',
+    mouth:'M44 43 Q50 44 56 43',
+    eyeLr:5.5, eyeRr:5.5,
+    cheekOp:'.4',
+    bubble: name => `${name}、もう少し早く寝られるといいね`,
+  },
+  sleepy: {
+    label:'😪 ねむい',
+    browL:'M35 25 Q40 24 45 25', browR:'M55 25 Q60 24 65 25',
+    mouth:'M44 44 Q50 42 56 44',
+    eyeLr:3, eyeRr:3,
+    cheekOp:'.2',
+    bubble: name => `${name}、ぼくも眠い…zzz`,
+  },
+  sad: {
+    label:'😢 つらい',
+    browL:'M35 21 Q40 24 45 21', browR:'M55 21 Q60 24 65 21',
+    mouth:'M43 45 Q50 40 57 45',
+    eyeLr:5.5, eyeRr:5.5,
+    cheekOp:'.6',
+    bubble: name => `${name}、睡眠が足りないよ…一緒に改善しよう`,
+  },
+};
+
+let xp = parseInt(localStorage.getItem("su_xp")) || 0;
+let level = parseInt(localStorage.getItem("su_level")) || 0;
+let cur = 0;
+let streakDays = parseInt(localStorage.getItem("su_streak")) || 0;
+let charName = localStorage.getItem('su_name') || 'ムーニー';
+let currentMood = 'normal';
+
+const tasks = [
+  {name:'夕食・家事',    dur:60, icon:'ti-tools-kitchen-2'},
+  {name:'入浴・シャワー', dur:30, icon:'ti-bath'},
+  {name:'SNS・動画',    dur:30, icon:'ti-device-mobile'},
+];
+
+/* ===================================================
+   表情変化
+=================================================== */
+function applyMood(moodKey, animate) {
+  const m = MOODS[moodKey] || MOODS.normal;
+  currentMood = moodKey;
+
+  document.getElementById('browL').setAttribute('d', m.browL);
+  document.getElementById('browR').setAttribute('d', m.browR);
+  document.getElementById('mouth').setAttribute('d', m.mouth);
+
+  const eyeL = document.querySelector('#eyeL circle');
+  const eyeR = document.querySelector('#eyeR circle');
+  eyeL.setAttribute('r', m.eyeLr);
+  eyeR.setAttribute('r', m.eyeRr);
+
+  // 眠い時は目を細める（半楕円マスク）
+  if (moodKey === 'sleepy') {
+    eyeL.setAttribute('ry', 2.5);
+    eyeR.setAttribute('ry', 2.5);
+  } else {
+    eyeL.removeAttribute('ry');
+    eyeR.removeAttribute('ry');
+  }
+
+  document.getElementById('cheekL').setAttribute('opacity', m.cheekOp);
+  document.getElementById('cheekR').setAttribute('opacity', m.cheekOp);
+  document.getElementById('moodLabel').textContent = m.label;
+
+  setBubble(m.bubble(charName));
+
+  if (animate) {
+    const svg = document.getElementById('charSvg');
+    svg.style.animation = 'none';
+    requestAnimationFrame(() => {
+      svg.style.animation = 'bounceIn .5s ease';
+    });
+  }
+}
+
+function updateMoodFromSleep() {
+  const h = parseFloat(document.getElementById('sleepDur').value);
+  let mood = 'normal';
+  if (h >= 8)       mood = 'excited';
+  else if (h >= 7)  mood = 'happy';
+  else if (h >= 6)  mood = 'normal';
+  else if (h >= 5)  mood = 'sleepy';
+  else              mood = 'sad';
+  applyMood(mood, true);
+}
+
+function updateMoodFromSatisfaction(el) {
+  const txt = el.textContent;
+  let mood = 'normal';
+  if (txt === '十分すぎる')   mood = 'excited';
+  else if (txt === 'まあまあ') mood = 'happy';
+  else if (txt === '少し足りない') mood = 'normal';
+  else if (txt === '全然足りない') mood = 'sad';
+  applyMood(mood, true);
+}
+
+function updateMoodFromResult(onTime) {
+  applyMood(onTime ? 'excited' : 'sleepy', true);
+}
+
+/* ===================================================
+   名前モーダル
+=================================================== */
+function openNameModal() {
+  document.getElementById('nameInput').value = charName === 'ムーニー' ? '' : charName;
+  document.getElementById('nameModal').classList.add('show');
+  setTimeout(() => document.getElementById('nameInput').focus(), 100);
+}
+function closeNameModal() {
+  document.getElementById('nameModal').classList.remove('show');
+}
+function closeNameModalBg(e) {
+  if (e.target === document.getElementById('nameModal')) closeNameModal();
+}
+function saveName() {
+  const v = document.getElementById('nameInput').value.trim();
+  if (!v) return;
+  charName = v;
+  localStorage.setItem('su_name', charName);
+  document.getElementById('charNameDisplay').textContent = charName + ' ✏️';
+  closeNameModal();
+  setBubble(`${charName}！いい名前だね、よろしく！`);
+  const svg = document.getElementById('charSvg');
+  svg.style.animation = 'none';
+  requestAnimationFrame(() => { svg.style.animation = 'bounceIn .5s ease'; });
+}
+
+/* ===================================================
+   キャラクター更新・EXP
+=================================================== */
+function updateChar(animate) {
+  const lv = LEVELS[level];
+  const sz = lv.size;
+  const svg = document.getElementById('charSvg');
+  svg.setAttribute('width', sz);
+  svg.setAttribute('height', sz * 1.2);
+  document.getElementById('charLevelLbl').textContent = lv.title + ' ' + lv.name;
+  document.getElementById('lvlBadge').innerHTML = '⭐ ' + lv.title;
+  const pct = level < LEVELS.length - 1 ? Math.round(xp / LEVELS[level].next * 100) : 100;
+  document.getElementById('xpFill').style.width = pct + '%';
+  document.getElementById('xpLbl').textContent = xp + ' / ' + LEVELS[level].next;
+  if (animate) {
+    svg.style.animation = 'none';
+    requestAnimationFrame(() => { svg.style.animation = 'bounceIn .5s ease'; });
+  }
+}
+
+function setBubble(text) {
+  const b = document.getElementById('bubble');
+  b.textContent = text;
+  b.style.animation = 'none';
+  requestAnimationFrame(() => { b.style.animation = 'popIn .35s cubic-bezier(.34,1.56,.64,1)'; });
+}
+
+function addXP(amt) {
+  const oldLevel = level;
+  xp += amt;
+  while (level < LEVELS.length - 1 && xp >= LEVELS[level].next) {
+    xp -= LEVELS[level].next;
+    level++;
+    const popup = document.getElementById('lvlPopup');
+    popup.classList.add('show');
+    document.getElementById('lvlPopupTitle').textContent = '🎉 ' + LEVELS[level].title + ' レベルアップ！';
+    document.getElementById('lvlPopupSub').textContent =
+      charName + 'が「' + LEVELS[level].name + '」に成長しました！';
+    setTimeout(() => popup.classList.remove('show'), 3000);
+  }
+  if (level !== oldLevel) setBubble(LEVELS[level].msg.replace('ムーニー', charName));
+  updateChar(level !== oldLevel);
+  localStorage.setItem('su_xp', xp);
+  localStorage.setItem('su_level', level);
+}
+
+/* ===================================================
+   画面遷移
+=================================================== */
+function go(n) {
+  document.getElementById('s' + cur).classList.remove('active');
+  cur = n;
+  document.getElementById('s' + cur).classList.add('active');
+  const lbls = ['ステップ 1 / 4','ステップ 2 / 4','ステップ 3 / 4','完成！'];
+  document.getElementById('stepLbl').textContent = lbls[n];
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('d' + i);
+    d.className = 'step-dot';
+    if (i < n) d.classList.add('done');
+    else if (i === n) d.classList.add('active');
+  }
+  const bubbles = [
+    `${charName}、いまの睡眠を教えてね！`,
+    `${charName}、目標を決めよう！`,
+    `${charName}、今日の予定を入れてみよう！`,
+    `${charName}、プランができたよ！一緒にがんばろう！`,
+  ];
+  setBubble(bubbles[n]);
+  window.scrollTo(0, 0);
+}
+
+/* ===================================================
+   ユーティリティ
+=================================================== */
+function pick1(el) {
+  el.closest('.chips').querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+}
+function t2m(s) {
+  const [h, m] = s.split(':').map(Number);
+  return h * 60 + m;
+}
+function m2t(m) {
+  const mm = ((m % 1440) + 1440) % 1440;
+  return String(Math.floor(mm / 60)).padStart(2,'0') + ':' + String(mm % 60).padStart(2,'0');
+}
+
+/* ===================================================
+   タスク
+=================================================== */
+function addTask() {
+  const nm = document.getElementById('newTask').value.trim();
+  const dr = parseInt(document.getElementById('newDur').value);
+  if (!nm) return;
+  tasks.push({name: nm, dur: dr, icon: 'ti-circle-check'});
+  renderTasks();
+  document.getElementById('newTask').value = '';
+}
+function delTask(i) { tasks.splice(i, 1); renderTasks(); }
+function renderTasks() {
+  document.getElementById('taskList').innerHTML = tasks.map((t, i) =>
+    `<div class="task-row">
+      <i class="ti ${t.icon}" style="font-size:14px;color:#534AB7"></i>
+      <span class="task-nm">${t.name}</span>
+      <span class="task-dur">${t.dur}分</span>
+      <button class="task-del" onclick="delTask(${i})" aria-label="削除">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>`
+  ).join('');
+}
+renderTasks();
+
+/* ===================================================
+   カレンダー
+=================================================== */
+function buildCal() {
+  const wdays = ['月','火','水','木','金','土','日'];
+  const today = new Date();
+  let html = wdays.map(d =>
+    `<div style="font-size:10px;color:#7F77DD;text-align:center;padding-bottom:2px">${d}</div>`
+  ).join('');
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const done = i >= 7 - streakDays;
+    const isToday = i === 0;
+    html += `<div class="cal-day ${done?'done':''} ${isToday?'today':''}">${d.getDate()}</div>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+/* ===================================================
+   結果計算
+=================================================== */
+function calcResult() {
+  const goalBed   = document.getElementById('goalBed').value   || '23:30';
+  const goalWake  = document.getElementById('goalWake').value  || '07:00';
+  const freeStart = document.getElementById('freeStart').value || '19:00';
+  const remSel  = document.querySelector('#s1 .chips .chip.on');
+  const remText = remSel ? remSel.textContent : '15分前';
+  const remMin  = remText === '1時間前' ? 60 : parseInt(remText);
+
+  const gbMin = t2m(goalBed), gwMin = t2m(goalWake), fsMin = t2m(freeStart);
+  const totalTask = tasks.reduce((s, t) => s + t.dur, 0);
+  const actualBed = Math.max(fsMin + totalTask, gbMin);
+  let goalSleep = gwMin - gbMin;
+  if (goalSleep <= 0) goalSleep += 1440;
+  const curSleep = parseFloat(document.getElementById('sleepDur').value) * 60;
+  const diffH = (goalSleep - curSleep) / 60;
+  const notifTime = actualBed - remMin;
+  const onTime = actualBed <= gbMin + 15;
+
+  document.getElementById('resBed').textContent = m2t(actualBed);
+  document.getElementById('resMsg').textContent = onTime
+    ? '目標通り就寝できます！すごい！'
+    : '予定を全部こなせる最短就寝時刻！（目標より' + Math.round(actualBed - gbMin) + '分遅め）';
+  document.getElementById('rSl').textContent = (goalSleep/60).toFixed(1) + 'h';
+  document.getElementById('rWk').textContent = goalWake;
+  document.getElementById('rDf').textContent = (diffH>=0?'+':'') + diffH.toFixed(1) + 'h';
+  document.getElementById('rNt').textContent = m2t(notifTime);
+
+  const events = [{time:fsMin, label:'フリータイム開始', pip:'tk', icon:'ti-home'}];
+  let t = fsMin;
+  tasks.forEach(tk => {
+    events.push({time:t, label:tk.name+'（'+tk.dur+'分）', pip:'tk', icon:tk.icon||'ti-circle-check'});
+    t += tk.dur;
+  });
+  events.push({time:notifTime, label:'就寝リマインダー通知', pip:'nt', icon:'ti-bell'});
+  events.push({time:actualBed, label:'就寝 おやすみ！', pip:'zz', icon:'ti-zzz'});
+  const wakeMin = gwMin + (gwMin < actualBed ? 1440 : 0);
+  events.push({time:wakeMin, label:'起床 おはよう！', pip:'sn', icon:'ti-sun'});
+  document.getElementById('tlBody').innerHTML = events.map(e =>
+    `<div class="tl-item">
+      <div class="pip ${e.pip}"><i class="ti ${e.icon}"></i></div>
+      <div><div class="tl-t">${m2t(e.time)}</div><div class="tl-d">${e.label}</div></div>
+    </div>`
+  ).join('');
+
+  streakDays = Math.min(streakDays + 1, 7);
+  localStorage.setItem('su_streak', streakDays);
+  buildCal();
+  document.getElementById('streakCount').textContent = streakDays + '日継続中！';
+
+  updateMoodFromResult(onTime);
+  addXP(1);
+  go(3);
+}
+
+/* ===================================================
+   初期化
+=================================================== */
+updateChar(false);
+buildCal();
+applyMood('normal', false);
+</script>
+</body>
+</html>
